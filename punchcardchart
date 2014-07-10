@@ -1,0 +1,42 @@
+#!/bin/bash
+
+IMAGE_PATH="image.png"
+
+#validate image size
+IMAGE_META=(`identify $IMAGE_PATH`)
+
+if [ ${IMAGE_META[2]} != "24x7" ]
+	then
+	echo "Please make sure you have imagemagick installed"
+	echo "$IMAGE_PATH must be a 24x7 pixel black and white image"
+fi
+
+PIXEL_VALUES=`convert $IMAGE_PATH txt:`
+
+
+DAYS=( Sun Mon Tue Wed Thu Fri Sat )
+#Easier to handle zero padding without complicating the logic
+HOURS=( 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23 )
+CURRENT_INDEX=0
+BASE_DAY=23
+
+while read -r LINE
+do
+	LINE=($LINE)
+	if [ ${LINE[-1]} == "black" ]
+		then
+		#convert current index into a time
+		#index % 24 = HOUR
+		#index / 24 = DAY
+		COMMIT_DAY=$((CURRENT_INDEX / 24))
+		COMMIT_HOUR=$((CURRENT_INDEX % 24))
+		COMMIT_DATE="'${DAYS[$COMMIT_DAY]} Sep $(($BASE_DAY + $COMMIT_DAY)) ${HOURS[$COMMIT_HOUR]}:30:00 2012 0000'"
+		echo $COMMIT_DATE
+		export GIT_AUTHOR_DATE=$COMMIT_DATE
+		echo "PunchCardChart!" >> ./commit_file
+		git add commit_file
+		git commit -m 'PunchCardChart!'
+	fi
+	CURRENT_INDEX=$((CURRENT_INDEX + 1))
+done < <(echo "$PIXEL_VALUES")
+
